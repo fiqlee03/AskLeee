@@ -7,9 +7,75 @@ if (!apiKey) {
 
 const genAI = new GoogleGenerativeAI(apiKey);
 
-// Model instances (updated to gemini-2.5-flash as gemini-1.5 is deprecated and 2.5-pro has a zero free-tier quota)
-export const geminiPro = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-export const geminiFlash = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+// Helper to determine if an error is a quota/rate limit error (429)
+function isQuotaError(error: any): boolean {
+  if (!error) return false;
+  if (error.status === 429) return true;
+  const msg = error.message?.toLowerCase() || '';
+  return (
+    msg.includes('429') ||
+    msg.includes('quota') ||
+    msg.includes('too many requests') ||
+    msg.includes('rate limit')
+  );
+}
+
+class FallbackGenerativeModel {
+  constructor(private modelNames: string[]) {}
+
+  private async executeWithFallback<T>(
+    operation: (model: any) => Promise<T>
+  ): Promise<T> {
+    let lastError: any = null;
+    for (const modelName of this.modelNames) {
+      try {
+        console.log(`[Gemini API] Attempting operation with model: ${modelName}`);
+        const modelInstance = genAI.getGenerativeModel({ model: modelName });
+        const result = await operation(modelInstance);
+        console.log(`[Gemini API] Successfully completed operation with model: ${modelName}`);
+        return result;
+      } catch (error: any) {
+        if (isQuotaError(error)) {
+          console.warn(`[Gemini API] Quota/Rate Limit (429) exceeded for model ${modelName}. Retrying with next fallback model...`);
+          lastError = error;
+          continue;
+        }
+        // If it's a validation error or something else, we might still want to try fallback,
+        // but let's log it clearly.
+        console.error(`[Gemini API] Error occurred with model ${modelName}:`, error);
+        lastError = error;
+        continue;
+      }
+    }
+    throw lastError || new Error('All Gemini fallback models failed.');
+  }
+
+  async generateContent(request: any): Promise<any> {
+    return this.executeWithFallback((model) => model.generateContent(request));
+  }
+
+  startChat(config?: any): any {
+    // Return a wrapped chat session that delegates sendMessage with fallback
+    return {
+      sendMessage: async (parts: any) => {
+        return this.executeWithFallback(async (model) => {
+          const chat = model.startChat(config);
+          return await chat.sendMessage(parts);
+        });
+      }
+    };
+  }
+}
+
+// Fallback chain for free-tier:
+// 1. gemini-3.5-flash (primary, newest, fast, high quality)
+// 2. gemini-2.5-flash (secondary, standard 2.5)
+// 3. gemini-flash-latest (last resort fallback, very high limit: 1500 RPD free tier limit)
+const fallbackChain = ['gemini-3.5-flash', 'gemini-2.5-flash', 'gemini-flash-latest'];
+
+export const geminiPro = new FallbackGenerativeModel(fallbackChain) as any;
+export const geminiFlash = new FallbackGenerativeModel(fallbackChain) as any;
+
 
 export interface FilePart {
   inlineData: {
