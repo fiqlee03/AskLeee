@@ -25,6 +25,11 @@ export default function AskStylistPage() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [wardrobeLoading, setWardrobeLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Suggested prompts
   const suggestions = [
@@ -297,7 +302,7 @@ export default function AskStylistPage() {
             />
             <button
               type="submit"
-              disabled={loading || !input.trim()}
+              disabled={!mounted || loading || !input.trim()}
               className="inline-flex items-center justify-center border border-[#c9a96e] bg-[#c9a96e] px-5 py-3 text-[#1a1814] hover:bg-transparent hover:text-[#c9a96e] transition-all disabled:opacity-50 disabled:pointer-events-none rounded-sm cursor-pointer"
             >
               <Send className="h-4 w-4" />

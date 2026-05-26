@@ -7,9 +7,9 @@ if (!apiKey) {
 
 const genAI = new GoogleGenerativeAI(apiKey);
 
-// Model instances (we use Flash for quick tags/chat, Pro for heavy thrift analysis)
-export const geminiPro = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
-export const geminiFlash = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+// Model instances (updated to gemini-2.5-flash as gemini-1.5 is deprecated and 2.5-pro has a zero free-tier quota)
+export const geminiPro = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+export const geminiFlash = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
 export interface FilePart {
   inlineData: {

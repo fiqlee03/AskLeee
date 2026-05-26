@@ -47,18 +47,31 @@ export async function POST(req: NextRequest) {
     // 5. Build system instruction prompt
     const systemInstruction = `${STYLE_ASSISTANT_SYSTEM_PROMPT}\n\n[WARDROBE_CONTEXT]\n${wardrobeContext}`;
 
-    // 6. Format chat history for Gemini (model expects 'model' instead of 'assistant')
-    const formattedHistory = messages.slice(0, -1).map(msg => ({
+    // 6. Format chat history for Gemini (model expects 'model' instead of 'assistant').
+    // Gemini expects the first message in the chat history to be from the 'user' role.
+    // Since the client initializes the conversation with an assistant welcome message,
+    // we must filter the history so that it begins with the first 'user' message.
+    const firstUserIndex = messages.findIndex((msg: { role: string }) => msg.role === 'user');
+    const historyMessages = firstUserIndex !== -1 && firstUserIndex < messages.length - 1
+      ? messages.slice(firstUserIndex, -1)
+      : [];
+
+    const formattedHistory = historyMessages.map((msg: { role: string; content: string }) => ({
       role: msg.role === 'user' ? 'user' : 'model',
       parts: [{ text: msg.content }],
     }));
 
     const currentMessage = messages[messages.length - 1].content;
 
-    // Start chat with system instructions
+    // Start chat with system instructions. We manually structure systemInstruction as a Content object
+    // to bypass an SDK limitation where strings passed to startChat are not correctly formatted
+    // before being sent to the Google Generative Language REST API.
     const chat = geminiFlash.startChat({
       history: formattedHistory,
-      systemInstruction: systemInstruction,
+      systemInstruction: {
+        role: 'system',
+        parts: [{ text: systemInstruction }],
+      },
     });
 
     const responseResult = await chat.sendMessage(currentMessage);
