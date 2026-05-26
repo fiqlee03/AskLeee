@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 
 export async function createClient() {
   const cookieStore = await cookies();
+  const rememberMe = cookieStore.get('sb-remember-me')?.value === 'true';
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,12 +15,16 @@ export async function createClient() {
         },
         setAll(cookiesToSet) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
+            cookiesToSet.forEach(({ name, value, options }) => {
+              const finalOptions = { ...options };
+              if (!rememberMe) {
+                delete finalOptions.maxAge;
+              }
               cookieStore.set(name, value, {
-                ...options,
+                ...finalOptions,
                 secure: process.env.NODE_ENV === 'production',
-              })
-            );
+              });
+            });
           } catch {
             // The `setAll` method can be called from a Server Component.
             // This can be ignored if you have middleware refreshing user sessions.

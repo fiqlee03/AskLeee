@@ -6,6 +6,8 @@ export async function updateSession(request: NextRequest) {
     request,
   });
 
+  const rememberMe = request.cookies.get('sb-remember-me')?.value === 'true';
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -15,16 +17,20 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value));
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           supabaseResponse = NextResponse.next({
             request,
           });
-          cookiesToSet.forEach(({ name, value, options }) =>
+          cookiesToSet.forEach(({ name, value, options }) => {
+            const finalOptions = { ...options };
+            if (!rememberMe) {
+              delete finalOptions.maxAge;
+            }
             supabaseResponse.cookies.set(name, value, {
-              ...options,
+              ...finalOptions,
               secure: process.env.NODE_ENV === 'production',
-            })
-          );
+            });
+          });
         },
       },
       cookieOptions: {

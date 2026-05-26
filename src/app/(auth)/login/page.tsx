@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 
@@ -11,8 +11,19 @@ export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('remember_me_email');
+    if (savedEmail) {
+      setTimeout(() => {
+        setEmail(savedEmail);
+        setRememberMe(true);
+      }, 0);
+    }
+  }, []);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +50,15 @@ export default function LoginPage() {
           password,
         });
         if (error) throw error;
+
+        if (rememberMe) {
+          localStorage.setItem('remember_me_email', email);
+          document.cookie = `sb-remember-me=true; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax; ${window.location.protocol === 'https:' ? 'Secure;' : ''}`;
+        } else {
+          localStorage.removeItem('remember_me_email');
+          document.cookie = `sb-remember-me=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; ${window.location.protocol === 'https:' ? 'Secure;' : ''}`;
+        }
+
         router.push('/wardrobe');
         router.refresh();
       }
@@ -146,6 +166,22 @@ export default function LoginPage() {
               placeholder="••••••••"
             />
           </div>
+
+          {/* Remember Me Checkbox */}
+          {!isSignUp && (
+            <div className="flex items-center gap-3">
+              <input
+                id="remember_me"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-4 w-4 border-[#c9a96e]/20 bg-[#1a1814] text-[#c9a96e] focus:ring-0 focus:ring-offset-0 rounded-sm cursor-pointer accent-[#c9a96e]"
+              />
+              <label htmlFor="remember_me" className="text-xs font-semibold uppercase tracking-wider text-[#8a8070] hover:text-[#f5f0e8] cursor-pointer select-none transition-colors">
+                Remember me on this device
+              </label>
+            </div>
+          )}
 
           <div>
             <button
