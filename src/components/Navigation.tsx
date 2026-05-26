@@ -32,7 +32,7 @@ export default function Navigation() {
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/wardrobe" className="font-serif text-2xl tracking-widest text-[#c9a96e]">
-              CLOSET
+              ASKLEE
             </Link>
           </div>
 

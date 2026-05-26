@@ -15,7 +15,7 @@ const cormorantGaramond = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: "CLOSET — AI Wardrobe & Thrift Intelligence",
+  title: "ASKLEE — AI Wardrobe & Thrift Intelligence",
   description: "Personal wardrobe cataloguing and vintage thrift intelligence guided by Gemini AI.",
 };
 
