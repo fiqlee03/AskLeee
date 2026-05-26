@@ -3,12 +3,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import Navigation from '@/components/Navigation';
-import { Send, Sparkles, User, Bot, Loader2, ArrowRight, Shirt } from 'lucide-react';
+import { Send, Sparkles, User, Bot, Loader2, ArrowRight, Shirt, Camera, X } from 'lucide-react';
 import { GarmentItem } from '@/lib/types';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  image?: string;
+  mimeType?: string;
 }
 
 export default function AskStylistPage() {
@@ -26,6 +28,8 @@ export default function AskStylistPage() {
   const [loading, setLoading] = useState(false);
   const [wardrobeLoading, setWardrobeLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<{ url: string; file: File } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -63,11 +67,30 @@ export default function AskStylistPage() {
 
   const handleSendMessage = async (textToSend?: string) => {
     const queryText = textToSend || input;
-    if (!queryText.trim() || loading) return;
+    if ((!queryText.trim() && !selectedImage) || loading) return;
 
     if (!textToSend) setInput('');
 
-    const newMessages: Message[] = [...messages, { role: 'user', content: queryText }];
+    let base64Image: string | undefined;
+    let mimeType: string | undefined;
+
+    if (selectedImage) {
+      base64Image = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(selectedImage.file);
+      });
+      mimeType = selectedImage.file.type;
+      setSelectedImage(null);
+    }
+
+    const messageContent = queryText || 'What do you think of this?';
+    const newMessages: Message[] = [...messages, { 
+      role: 'user', 
+      content: messageContent,
+      image: base64Image,
+      mimeType
+    }];
     setMessages(newMessages);
     setLoading(true);
 
@@ -240,7 +263,17 @@ export default function AskStylistPage() {
                   }`}
                 >
                   {msg.role === 'user' ? (
-                    <p className="text-sm leading-relaxed">{msg.content}</p>
+                    <div className="space-y-3">
+                      {msg.image && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img 
+                          src={msg.image} 
+                          alt="User uploaded image" 
+                          className="rounded-sm max-w-full h-auto max-h-64 object-contain border border-[#c9a96e]/10" 
+                        />
+                      )}
+                      <p className="text-sm leading-relaxed">{msg.content}</p>
+                    </div>
                   ) : (
                     <div className="space-y-1.5">{formatMessageContent(msg.content)}</div>
                   )}
@@ -285,29 +318,66 @@ export default function AskStylistPage() {
           )}
 
           {/* Input form */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSendMessage();
-            }}
-            className="p-4 border-t border-[#c9a96e]/10 bg-[#1a1814]/50 flex gap-4"
-          >
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              disabled={loading}
-              placeholder="Ask for outfit ideas, matching accessories, styling formulas..."
-              className="flex-1 border border-[#c9a96e]/20 bg-[#1a1814] px-4 py-3 text-sm text-[#f5f0e8] placeholder-[#8a8070]/30 outline-none transition-all focus:border-[#c9a96e] rounded-sm"
-            />
-            <button
-              type="submit"
-              disabled={!mounted || loading || !input.trim()}
-              className="inline-flex items-center justify-center border border-[#c9a96e] bg-[#c9a96e] px-5 py-3 text-[#1a1814] hover:bg-transparent hover:text-[#c9a96e] transition-all disabled:opacity-50 disabled:pointer-events-none rounded-sm cursor-pointer"
+          <div className="bg-[#1a1814]/50 border-t border-[#c9a96e]/10 p-4">
+            {selectedImage && (
+              <div className="mb-3 relative inline-block">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={selectedImage.url} alt="Preview" className="h-20 w-20 object-cover rounded-sm border border-[#c9a96e]/30" />
+                <button
+                  type="button"
+                  onClick={() => setSelectedImage(null)}
+                  className="absolute -top-2 -right-2 bg-[#252118] text-[#c9a96e] border border-[#c9a96e]/30 rounded-full p-1 hover:bg-[#c9a96e] hover:text-[#1a1814] transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSendMessage();
+              }}
+              className="flex gap-2"
             >
-              <Send className="h-4 w-4" />
-            </button>
-          </form>
+              <input 
+                type="file" 
+                accept="image/*" 
+                className="hidden" 
+                ref={fileInputRef}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setSelectedImage({ url: URL.createObjectURL(file), file });
+                  }
+                  if (fileInputRef.current) fileInputRef.current.value = '';
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={loading}
+                className="inline-flex items-center justify-center border border-[#c9a96e]/20 bg-[#252118] px-4 py-3 text-[#c9a96e] hover:border-[#c9a96e]/50 transition-all disabled:opacity-50 disabled:pointer-events-none rounded-sm cursor-pointer"
+                title="Upload Photo"
+              >
+                <Camera className="h-4 w-4" />
+              </button>
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                disabled={loading}
+                placeholder="Ask for outfit ideas, matching accessories, styling formulas..."
+                className="flex-1 border border-[#c9a96e]/20 bg-[#1a1814] px-4 py-3 text-sm text-[#f5f0e8] placeholder-[#8a8070]/30 outline-none transition-all focus:border-[#c9a96e] rounded-sm"
+              />
+              <button
+                type="submit"
+                disabled={!mounted || loading || (!input.trim() && !selectedImage)}
+                className="inline-flex items-center justify-center border border-[#c9a96e] bg-[#c9a96e] px-5 py-3 text-[#1a1814] hover:bg-transparent hover:text-[#c9a96e] transition-all disabled:opacity-50 disabled:pointer-events-none rounded-sm cursor-pointer"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </form>
+          </div>
         </main>
 
       </div>

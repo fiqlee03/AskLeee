@@ -56,12 +56,24 @@ export async function POST(req: NextRequest) {
       ? messages.slice(firstUserIndex, -1)
       : [];
 
-    const formattedHistory = historyMessages.map((msg: { role: string; content: string }) => ({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.content }],
-    }));
+    const formattedHistory = historyMessages.map((msg: { role: string; content: string; image?: string; mimeType?: string }) => {
+      const parts: any[] = [{ text: msg.content }];
+      if (msg.image && msg.mimeType) {
+        const base64Data = msg.image.includes('base64,') ? msg.image.split('base64,')[1] : msg.image;
+        parts.push({ inlineData: { data: base64Data, mimeType: msg.mimeType } });
+      }
+      return {
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts,
+      };
+    });
 
-    const currentMessage = messages[messages.length - 1].content;
+    const currentMessageObj = messages[messages.length - 1];
+    const currentParts: any[] = [{ text: currentMessageObj.content }];
+    if (currentMessageObj.image && currentMessageObj.mimeType) {
+      const base64Data = currentMessageObj.image.includes('base64,') ? currentMessageObj.image.split('base64,')[1] : currentMessageObj.image;
+      currentParts.push({ inlineData: { data: base64Data, mimeType: currentMessageObj.mimeType } });
+    }
 
     // Start chat with system instructions. We manually structure systemInstruction as a Content object
     // to bypass an SDK limitation where strings passed to startChat are not correctly formatted
@@ -74,7 +86,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    const responseResult = await chat.sendMessage(currentMessage);
+    const responseResult = await chat.sendMessage(currentParts);
     const replyText = responseResult.response.text();
 
     return NextResponse.json({ reply: replyText });
