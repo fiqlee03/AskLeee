@@ -14,6 +14,8 @@ export interface GarmentItem {
     purchase_price?: number;
     worn_count: number;
     ai_summary?: string;
+    is_grail?: boolean;
+    discovery_story?: string;
     created_at: string;
 }
 
@@ -42,5 +44,8 @@ export interface UserProfile {
     id: string;
     updated_at: string;
     ai_instructions: string;
+    avatar_url?: string;
+    bio?: string;
+    wishlist?: string;
 }
 

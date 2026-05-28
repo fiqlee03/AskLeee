@@ -23,10 +23,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. Fetch custom AI styling/thrift instructions
+    // 2. Fetch custom AI styling/thrift instructions and wishlist
     const { data: profile } = await supabase
       .from('profiles')
-      .select('ai_instructions')
+      .select('ai_instructions, wishlist')
       .eq('id', user.id)
       .single();
 
@@ -34,7 +34,11 @@ export async function POST(req: NextRequest) {
       ? `\n\nUSER CUSTOM THRIFT & QUALITY GUIDELINES (Strictly prioritize and apply these rules to your quality assessment, brand appraisal, fiber checks, and purchase advice):\n${profile.ai_instructions}`
       : '';
 
-    const finalPrompt = `${THRIFT_INTELLIGENCE_PROMPT}${customInstructions}`;
+    const wishlistInstructions = profile?.wishlist
+      ? `\n\nUSER WISHLIST / HUNTING LIST (If the analyzed item matches or is highly similar/relevant to any item on this list, raise your recommendation/confidence score where appropriate, clearly call out the wishlist match in the 'reasoning' and 'qualitySignals' fields, and heavily lean towards a 'BUY' verdict if quality matches your checks):\n${profile.wishlist}`
+      : '';
+
+    const finalPrompt = `${THRIFT_INTELLIGENCE_PROMPT}${customInstructions}${wishlistInstructions}`;
 
     const imageParts = images.map((img: { imageBase64: string; mimeType: string }) =>
       base64ToFilePart(img.imageBase64, img.mimeType)

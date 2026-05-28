@@ -4,13 +4,36 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { LogOut, Shirt, MessageSquare, Tag, BarChart3, Menu, X, User } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadAvatar() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('avatar_url')
+          .eq('id', user.id)
+          .single();
+
+        if (profile?.avatar_url) {
+          setAvatarUrl(profile.avatar_url);
+        }
+      } catch (err) {
+        console.error('Failed to load avatar in nav:', err);
+      }
+    }
+    loadAvatar();
+  }, [supabase]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -52,7 +75,16 @@ export default function Navigation() {
                       : 'border-transparent text-[#8a8070] hover:text-[#f5f0e8] hover:border-[#c9a96e]/30'
                   }`}
                 >
-                  <Icon className="mr-2 h-4 w-4" />
+                  {item.name === 'Profile' && avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={avatarUrl}
+                      alt="Avatar"
+                      className="mr-2 h-5 w-5 rounded-full object-cover border border-[#c9a96e]/30"
+                    />
+                  ) : (
+                    <Icon className="mr-2 h-4 w-4" />
+                  )}
                   {item.name}
                 </Link>
               );
@@ -100,7 +132,16 @@ export default function Navigation() {
                       : 'text-[#8a8070] hover:bg-[#1a1814]/50 hover:text-[#f5f0e8]'
                   }`}
                 >
-                  <Icon className="mr-3 h-5 w-5" />
+                  {item.name === 'Profile' && avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={avatarUrl}
+                      alt="Avatar"
+                      className="mr-3 h-6 w-6 rounded-full object-cover border border-[#c9a96e]/30"
+                    />
+                  ) : (
+                    <Icon className="mr-3 h-5 w-5" />
+                  )}
                   {item.name}
                 </Link>
               );

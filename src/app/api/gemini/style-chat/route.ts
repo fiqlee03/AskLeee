@@ -44,10 +44,10 @@ export async function POST(req: NextRequest) {
         }).join('\n');
     }
 
-    // 5. Fetch user profile settings for custom AI instructions
+    // 5. Fetch user profile settings for custom AI instructions and wishlist
     const { data: profile } = await supabase
       .from('profiles')
-      .select('ai_instructions')
+      .select('ai_instructions, wishlist')
       .eq('id', user.id)
       .single();
 
@@ -55,8 +55,12 @@ export async function POST(req: NextRequest) {
       ? `\n\nUSER CUSTOM STYLE INSTRUCTIONS (Strictly prioritize and align all styling, brand, and fabric suggestions to these rules):\n${profile.ai_instructions}`
       : '';
 
+    const wishlistInstructions = profile?.wishlist
+      ? `\n\nUSER WISHLIST / HUNTING LIST (These are items the user is actively hunting for. If they ask for styling recommendations and their wardrobe is missing a piece, suggest acquiring one of their wishlist items to complete the outfit if relevant):\n${profile.wishlist}`
+      : '';
+
     // 6. Build system instruction prompt
-    const systemInstruction = `${STYLE_ASSISTANT_SYSTEM_PROMPT}${customInstructions}\n\n[WARDROBE_CONTEXT]\n${wardrobeContext}`;
+    const systemInstruction = `${STYLE_ASSISTANT_SYSTEM_PROMPT}${customInstructions}${wishlistInstructions}\n\n[WARDROBE_CONTEXT]\n${wardrobeContext}`;
 
     // 6. Format chat history for Gemini (model expects 'model' instead of 'assistant').
     // Gemini expects the first message in the chat history to be from the 'user' role.
