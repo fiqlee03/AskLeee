@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { geminiPro, THRIFT_INTELLIGENCE_PROMPT, base64ToFilePart } from '@/lib/gemini';
+import { createClient } from '@/utils/supabase/server';
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,12 +13,35 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // 1. Authenticate user session
+    const supabase = await createClient();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized.' },
+        { status: 401 }
+      );
+    }
+
+    // 2. Fetch custom AI styling/thrift instructions
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('ai_instructions')
+      .eq('id', user.id)
+      .single();
+
+    const customInstructions = profile?.ai_instructions
+      ? `\n\nUSER CUSTOM THRIFT & QUALITY GUIDELINES (Strictly prioritize and apply these rules to your quality assessment, brand appraisal, fiber checks, and purchase advice):\n${profile.ai_instructions}`
+      : '';
+
+    const finalPrompt = `${THRIFT_INTELLIGENCE_PROMPT}${customInstructions}`;
+
     const imageParts = images.map((img: { imageBase64: string; mimeType: string }) =>
       base64ToFilePart(img.imageBase64, img.mimeType)
     );
 
     const result = await geminiPro.generateContent([
-      THRIFT_INTELLIGENCE_PROMPT,
+      finalPrompt,
       ...imageParts,
     ]);
 
@@ -26,7 +50,7 @@ export async function POST(req: NextRequest) {
 
     const cleanedText = text.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
 
-  try {
+    try {
       const parsedData = JSON.parse(cleanedText);
       return NextResponse.json({ data: parsedData });
     } catch {

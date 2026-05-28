@@ -44,8 +44,19 @@ export async function POST(req: NextRequest) {
         }).join('\n');
     }
 
-    // 5. Build system instruction prompt
-    const systemInstruction = `${STYLE_ASSISTANT_SYSTEM_PROMPT}\n\n[WARDROBE_CONTEXT]\n${wardrobeContext}`;
+    // 5. Fetch user profile settings for custom AI instructions
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('ai_instructions')
+      .eq('id', user.id)
+      .single();
+
+    const customInstructions = profile?.ai_instructions
+      ? `\n\nUSER CUSTOM STYLE INSTRUCTIONS (Strictly prioritize and align all styling, brand, and fabric suggestions to these rules):\n${profile.ai_instructions}`
+      : '';
+
+    // 6. Build system instruction prompt
+    const systemInstruction = `${STYLE_ASSISTANT_SYSTEM_PROMPT}${customInstructions}\n\n[WARDROBE_CONTEXT]\n${wardrobeContext}`;
 
     // 6. Format chat history for Gemini (model expects 'model' instead of 'assistant').
     // Gemini expects the first message in the chat history to be from the 'user' role.

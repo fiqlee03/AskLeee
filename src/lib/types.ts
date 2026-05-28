@@ -38,3 +38,9 @@ export interface ThriftAnalysis {
     reasoning: string;
 }
 
+export interface UserProfile {
+    id: string;
+    updated_at: string;
+    ai_instructions: string;
+}
+

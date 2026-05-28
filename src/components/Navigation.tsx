@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
-import { LogOut, Shirt, MessageSquare, Tag, BarChart3, Menu, X } from 'lucide-react';
+import { LogOut, Shirt, MessageSquare, Tag, BarChart3, Menu, X, User } from 'lucide-react';
 import { useState } from 'react';
 
 export default function Navigation() {
@@ -23,6 +23,7 @@ export default function Navigation() {
     { name: 'AI Stylist', href: '/ask', icon: MessageSquare },
     { name: 'Thrift Mode', href: '/thrift', icon: Tag },
     { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+    { name: 'Profile', href: '/profile', icon: User },
   ];
 
   return (
