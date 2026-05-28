@@ -4,8 +4,8 @@ import { createClient } from '@/utils/supabase/server';
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
-  // If "next" query param is set, redirect there, otherwise redirect to the wardrobe dashboard
-  const next = searchParams.get('next') ?? '/wardrobe';
+  // If "next" query param is set, redirect there, otherwise redirect to the dashboard
+  const next = searchParams.get('next') ?? '/';
 
   if (code) {
     const supabase = await createClient();

@@ -31,7 +31,7 @@ export default function Navigation() {
         <div className="flex h-16 justify-between items-center">
           {/* Logo */}
           <div className="flex items-center">
-            <Link href="/wardrobe" className="font-serif text-2xl tracking-widest text-[#c9a96e]">
+            <Link href="/" className="font-serif text-2xl tracking-widest text-[#c9a96e]">
               ASKLEE
             </Link>
           </div>
